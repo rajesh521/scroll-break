@@ -1,29 +1,37 @@
 import { Redirect } from 'expo-router';
 import { useState, useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingScreen from '@/components/OnboardingScreen';
+import PermissionsScreen from '@/components/PermissionsScreen';
+
+type AppScreen = 'loading' | 'onboarding' | 'permissions' | 'main';
 
 export default function Index() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('loading');
 
   useEffect(() => {
-    checkOnboarding();
+    checkInitialScreen();
   }, []);
 
-  const checkOnboarding = async () => {
+  const checkInitialScreen = async () => {
     try {
       const onboardingComplete = await AsyncStorage.getItem('onboardingComplete');
-      setShowOnboarding(onboardingComplete !== 'true');
+      const permissionsComplete = await AsyncStorage.getItem('permissions_complete');
+      
+      if (onboardingComplete !== 'true') {
+        setCurrentScreen('onboarding');
+      } else if (permissionsComplete !== 'true' && Platform.OS === 'android') {
+        setCurrentScreen('permissions');
+      } else {
+        setCurrentScreen('main');
+      }
     } catch (error) {
-      setShowOnboarding(true);
-    } finally {
-      setIsLoading(false);
+      setCurrentScreen('onboarding');
     }
   };
 
-  if (isLoading) {
+  if (currentScreen === 'loading') {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: '#FFF8F0' }}>
         <ActivityIndicator size="large" color="#A78BFA" />
@@ -31,10 +39,24 @@ export default function Index() {
     );
   }
 
-  if (showOnboarding) {
+  if (currentScreen === 'onboarding') {
     return (
       <OnboardingScreen 
-        onComplete={() => setShowOnboarding(false)} 
+        onComplete={() => {
+          if (Platform.OS === 'android') {
+            setCurrentScreen('permissions');
+          } else {
+            setCurrentScreen('main');
+          }
+        }} 
+      />
+    );
+  }
+
+  if (currentScreen === 'permissions') {
+    return (
+      <PermissionsScreen 
+        onComplete={() => setCurrentScreen('main')} 
       />
     );
   }

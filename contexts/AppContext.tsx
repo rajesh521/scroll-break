@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 
 interface Artwork {
   id: string;
@@ -37,6 +38,8 @@ interface AppContextType {
   todayStats: DailyStats;
   timerSettings: TimerSettings;
   isTimerRunning: boolean;
+  isGlobalTimerActive: boolean;
+  globalTimerEndTime: number | null;
   startScrollTracking: () => void;
   stopScrollTracking: () => void;
   triggerBreak: () => void;
@@ -45,6 +48,10 @@ interface AppContextType {
   deleteArtwork: (id: string) => void;
   resetScrollTimer: () => void;
   updateTimerSettings: (settings: Partial<TimerSettings>) => void;
+  startGlobalTimer: (durationMinutes: number) => void;
+  stopGlobalTimer: () => void;
+  showSystemOverlay: boolean;
+  setShowSystemOverlay: (show: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -54,6 +61,9 @@ const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   breakMinutes: 15,
   breakDuration: 5,
 };
+
+const GLOBAL_TIMER_END_KEY = 'global_timer_end_time';
+const GLOBAL_TIMER_ACTIVE_KEY = 'global_timer_active';
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [scrollTime, setScrollTime] = useState(0);
@@ -70,12 +80,119 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     breaksTaken: 0,
   });
 
+  // Global timer state (works across apps)
+  const [isGlobalTimerActive, setIsGlobalTimerActive] = useState(false);
+  const [globalTimerEndTime, setGlobalTimerEndTime] = useState<number | null>(null);
+  const [showSystemOverlay, setShowSystemOverlay] = useState(false);
+
   const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const globalTimerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const breakStartTimeRef = useRef<number>(0);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     loadData();
+    loadGlobalTimerState();
+    
+    // Listen to app state changes for background timer
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription.remove();
+    };
   }, []);
+
+  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      // App came to foreground - check if global timer expired
+      await checkGlobalTimerOnResume();
+    }
+    appState.current = nextAppState;
+  };
+
+  const checkGlobalTimerOnResume = async () => {
+    const endTimeStr = await AsyncStorage.getItem(GLOBAL_TIMER_END_KEY);
+    const isActive = await AsyncStorage.getItem(GLOBAL_TIMER_ACTIVE_KEY);
+    
+    if (isActive === 'true' && endTimeStr) {
+      const endTime = parseInt(endTimeStr, 10);
+      if (Date.now() >= endTime) {
+        // Timer expired while in background - show overlay
+        setShowSystemOverlay(true);
+        setIsGlobalTimerActive(false);
+        await AsyncStorage.setItem(GLOBAL_TIMER_ACTIVE_KEY, 'false');
+      } else {
+        // Timer still running - update remaining time
+        setGlobalTimerEndTime(endTime);
+        setIsGlobalTimerActive(true);
+        startGlobalTimerInterval(endTime);
+      }
+    }
+  };
+
+  const loadGlobalTimerState = async () => {
+    try {
+      const endTimeStr = await AsyncStorage.getItem(GLOBAL_TIMER_END_KEY);
+      const isActive = await AsyncStorage.getItem(GLOBAL_TIMER_ACTIVE_KEY);
+      
+      if (isActive === 'true' && endTimeStr) {
+        const endTime = parseInt(endTimeStr, 10);
+        if (Date.now() < endTime) {
+          setGlobalTimerEndTime(endTime);
+          setIsGlobalTimerActive(true);
+          startGlobalTimerInterval(endTime);
+        } else {
+          // Timer already expired
+          setShowSystemOverlay(true);
+          await AsyncStorage.setItem(GLOBAL_TIMER_ACTIVE_KEY, 'false');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading global timer state:', error);
+    }
+  };
+
+  const startGlobalTimerInterval = (endTime: number) => {
+    if (globalTimerIntervalRef.current) {
+      clearInterval(globalTimerIntervalRef.current);
+    }
+    
+    globalTimerIntervalRef.current = setInterval(() => {
+      const now = Date.now();
+      if (now >= endTime) {
+        if (globalTimerIntervalRef.current) {
+          clearInterval(globalTimerIntervalRef.current);
+          globalTimerIntervalRef.current = null;
+        }
+        setIsGlobalTimerActive(false);
+        setShowSystemOverlay(true);
+        AsyncStorage.setItem(GLOBAL_TIMER_ACTIVE_KEY, 'false');
+      }
+    }, 1000);
+  };
+
+  const startGlobalTimer = async (durationMinutes: number) => {
+    const endTime = Date.now() + durationMinutes * 60 * 1000;
+    setGlobalTimerEndTime(endTime);
+    setIsGlobalTimerActive(true);
+    
+    await AsyncStorage.setItem(GLOBAL_TIMER_END_KEY, endTime.toString());
+    await AsyncStorage.setItem(GLOBAL_TIMER_ACTIVE_KEY, 'true');
+    
+    startGlobalTimerInterval(endTime);
+  };
+
+  const stopGlobalTimer = async () => {
+    if (globalTimerIntervalRef.current) {
+      clearInterval(globalTimerIntervalRef.current);
+      globalTimerIntervalRef.current = null;
+    }
+    setIsGlobalTimerActive(false);
+    setGlobalTimerEndTime(null);
+    
+    await AsyncStorage.setItem(GLOBAL_TIMER_ACTIVE_KEY, 'false');
+    await AsyncStorage.removeItem(GLOBAL_TIMER_END_KEY);
+  };
 
   useEffect(() => {
     const warningTimeSeconds = timerSettings.warningMinutes * 60;
@@ -233,6 +350,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         todayStats,
         timerSettings,
         isTimerRunning,
+        isGlobalTimerActive,
+        globalTimerEndTime,
         startScrollTracking,
         stopScrollTracking,
         triggerBreak,
@@ -241,6 +360,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteArtwork,
         resetScrollTimer,
         updateTimerSettings,
+        startGlobalTimer,
+        stopGlobalTimer,
+        showSystemOverlay,
+        setShowSystemOverlay,
       }}
     >
       {children}

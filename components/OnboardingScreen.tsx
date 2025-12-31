@@ -34,15 +34,15 @@ const slides: OnboardingSlide[] = [
     id: '1',
     title: 'Doomscrolling Hurts',
     subtitle: '😔 The Problem',
-    description: 'Too much screen time can make kids feel sad, tired, and lose focus. It steals time from play, creativity, and real friendships.',
+    description: 'Too much screen time can make kids feel sad, tired, anxious, and lose focus. Studies show it affects sleep, mood, and real friendships.',
     backgroundColor: '#FFE4E1',
     accentColor: '#FF6B6B',
   },
   {
     id: '2',
-    title: 'Take Creative Breaks',
-    subtitle: '🎨 The Solution',
-    description: 'Our app gently reminds kids to stop scrolling and do something creative! Drawing, coloring, and patterns keep minds happy.',
+    title: 'Works on ANY App',
+    subtitle: '🛡️ The Solution',
+    description: 'Parents set a timer. When it ends, a creative break screen appears OVER YouTube, Instagram, TikTok - any app your child is using!',
     backgroundColor: '#E8F5E9',
     accentColor: '#7FE5A8',
   },
@@ -50,7 +50,7 @@ const slides: OnboardingSlide[] = [
     id: '3',
     title: 'Build Healthy Habits',
     subtitle: '⭐ The Reward',
-    description: 'Earn achievements, save artwork, and track progress. Screen time becomes balanced and fun with creative breaks!',
+    description: 'Kids must complete a fun creative activity to continue. They earn achievements and build healthier screen time habits!',
     backgroundColor: '#F3E5F5',
     accentColor: '#A78BFA',
   },
@@ -155,10 +155,10 @@ function OnboardingImage1() {
   );
 }
 
-// Onboarding Image 2: Happy kid taking creative break
+// Onboarding Image 2: Shows overlay blocking apps
 function OnboardingImage2() {
   const bounce = useSharedValue(0);
-  const rotate = useSharedValue(0);
+  const pulse = useSharedValue(1);
 
   React.useEffect(() => {
     bounce.value = withRepeat(
@@ -169,10 +169,10 @@ function OnboardingImage2() {
       -1,
       true
     );
-    rotate.value = withRepeat(
+    pulse.value = withRepeat(
       withSequence(
-        withTiming(-10, { duration: 2000 }),
-        withTiming(10, { duration: 2000 })
+        withTiming(1.05, { duration: 1000 }),
+        withTiming(1, { duration: 1000 })
       ),
       -1,
       true
@@ -191,61 +191,51 @@ function OnboardingImage2() {
           <Circle cx="140" cy="140" r="130" fill="#7FE5A820" />
           <Circle cx="140" cy="140" r="100" fill="#7FE5A815" />
           
-          {/* Easel/Canvas */}
-          <G transform="translate(160, 80)">
-            <Rect x="0" y="0" width="80" height="100" rx="4" fill="#FFECD2" stroke="#5B4B8A" strokeWidth="3" />
-            {/* Art on canvas */}
-            <Circle cx="25" cy="35" r="15" fill="#FF6B6B" />
-            <Circle cx="55" cy="45" r="12" fill="#FFD93D" />
-            <Circle cx="40" cy="70" r="10" fill="#6BCFFF" />
-            <Path d="M20 85 Q40 75 60 85" stroke="#7FE5A8" strokeWidth="3" fill="none" />
+          {/* Phone with YouTube/Instagram */}
+          <G transform="translate(30, 30)">
+            <Rect x="0" y="0" width="90" height="150" rx="12" fill="#3A3A3A" />
+            <Rect x="5" y="10" width="80" height="130" rx="8" fill="#FF0000" opacity="0.8" />
+            <SvgText x="45" y="70" fill="#FFFFFF" fontSize="10" fontWeight="bold" textAnchor="middle">YouTube</SvgText>
+            <Path d="M35 85 L55 95 L35 105 Z" fill="#FFFFFF" />
           </G>
           
-          {/* Happy Kid */}
-          <G transform="translate(40, 100)">
-            {/* Body */}
-            <Ellipse cx="60" cy="110" rx="45" ry="55" fill="#7FE5A8" />
+          {/* Phone with Instagram */}
+          <G transform="translate(160, 50)">
+            <Rect x="0" y="0" width="90" height="150" rx="12" fill="#3A3A3A" />
+            <Rect x="5" y="10" width="80" height="130" rx="8" fill="#E1306C" opacity="0.8" />
+            <SvgText x="45" y="70" fill="#FFFFFF" fontSize="10" fontWeight="bold" textAnchor="middle">Instagram</SvgText>
+            <Circle cx="45" cy="90" r="15" stroke="#FFFFFF" strokeWidth="3" fill="none" />
+          </G>
+          
+          {/* Green overlay shield blocking */}
+          <G transform="translate(65, 100)">
+            <Rect x="0" y="0" width="150" height="130" rx="20" fill="#7FE5A8" opacity="0.95" />
+            <SvgText x="75" y="40" fill="#FFFFFF" fontSize="14" fontWeight="bold" textAnchor="middle">🎨 Creative</SvgText>
+            <SvgText x="75" y="60" fill="#FFFFFF" fontSize="14" fontWeight="bold" textAnchor="middle">Break Time!</SvgText>
             
-            {/* Head */}
-            <Circle cx="60" cy="45" r="45" fill="#FFECD2" />
+            {/* Mini activity icons */}
+            <Circle cx="40" cy="95" r="20" fill="#FFFFFF" opacity="0.3" />
+            <SvgText x="40" y="100" fill="#FFFFFF" fontSize="16" textAnchor="middle">🖌️</SvgText>
             
-            {/* Happy eyes */}
-            <Path d="M40 35 Q50 25 60 35" stroke="#5B4B8A" strokeWidth="4" fill="none" strokeLinecap="round" />
-            <Path d="M60 35 Q70 25 80 35" stroke="#5B4B8A" strokeWidth="4" fill="none" strokeLinecap="round" />
+            <Circle cx="75" cy="95" r="20" fill="#FFFFFF" opacity="0.3" />
+            <SvgText x="75" y="100" fill="#FFFFFF" fontSize="16" textAnchor="middle">🎨</SvgText>
             
-            {/* Big smile */}
-            <Path d="M35 55 Q60 80 85 55" stroke="#FF6B6B" strokeWidth="4" fill="none" strokeLinecap="round" />
-            
-            {/* Rosy cheeks */}
-            <Circle cx="30" cy="50" r="8" fill="#FF8DC7" opacity="0.5" />
-            <Circle cx="90" cy="50" r="8" fill="#FF8DC7" opacity="0.5" />
-            
-            {/* Arm holding brush */}
-            <Path d="M100 100 L130 70" stroke="#FFECD2" strokeWidth="12" strokeLinecap="round" />
-            
-            {/* Paintbrush */}
-            <Rect x="125" y="50" width="6" height="40" rx="2" fill="#8B4513" />
-            <Ellipse cx="128" cy="48" rx="8" ry="6" fill="#FF6B6B" />
+            <Circle cx="110" cy="95" r="20" fill="#FFFFFF" opacity="0.3" />
+            <SvgText x="110" y="100" fill="#FFFFFF" fontSize="16" textAnchor="middle">🔷</SvgText>
           </G>
           
           {/* Sparkles */}
-          <G transform="translate(250, 50)">
-            <Path d="M0 -10 L2 -2 L10 0 L2 2 L0 10 L-2 2 L-10 0 L-2 -2 Z" fill="#FFD93D" />
+          <G transform="translate(30, 200)">
+            <Path d="M0 -8 L1.5 -1.5 L8 0 L1.5 1.5 L0 8 L-1.5 1.5 L-8 0 L-1.5 -1.5 Z" fill="#FFD93D" />
           </G>
-          <G transform="translate(30, 70)">
+          <G transform="translate(250, 180)">
             <Path d="M0 -8 L1.5 -1.5 L8 0 L1.5 1.5 L0 8 L-1.5 1.5 L-8 0 L-1.5 -1.5 Z" fill="#A78BFA" />
           </G>
-          <G transform="translate(200, 220)">
-            <Path d="M0 -8 L1.5 -1.5 L8 0 L1.5 1.5 L0 8 L-1.5 1.5 L-8 0 L-1.5 -1.5 Z" fill="#FF6B6B" />
-          </G>
-          <G transform="translate(50, 240)">
-            <Path d="M0 -6 L1 -1 L6 0 L1 1 L0 6 L-1 1 L-6 0 L-1 -1 Z" fill="#7FE5A8" />
-          </G>
           
-          {/* Timer icon */}
-          <G transform="translate(240, 140)">
-            <Circle cx="0" cy="0" r="25" fill="#FFFFFF" stroke="#5B4B8A" strokeWidth="3" />
-            <Path d="M0 -15 L0 0 L10 10" stroke="#5B4B8A" strokeWidth="3" fill="none" strokeLinecap="round" />
+          {/* Shield icon */}
+          <G transform="translate(215, 240)">
+            <Path d="M20 5 L35 10 L35 25 Q35 38 20 45 Q5 38 5 25 L5 10 Z" fill="#7FE5A8" />
+            <Path d="M14 23 L19 28 L29 16" stroke="#FFFFFF" strokeWidth="3" fill="none" strokeLinecap="round" />
           </G>
         </Svg>
       </Animated.View>
